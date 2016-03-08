@@ -77,8 +77,11 @@ void add_c(long long *pointer, long long value)
     if (opt_yield)
       pthread_yield();
     long long old = *pointer;
-    do{
-        long long retval = __sync_val_compare_and_swap(pointer, old, sum);
+    long long retval;
+    do{ //TODO: It's late and I don't really understand why all these need to be in here. Just toyed with this forever. Figure it out later.
+        old = *pointer;
+        sum = old + value;
+        retval = __sync_val_compare_and_swap(pointer, old, sum);
     } while(retval != old);
     
     //*pointer = sum;
