@@ -13,14 +13,23 @@
 #include <time.h>
 
 
-#define THREADS            'a'
-#define ITERATIONS         'b'
-#define YIELD              'c'
+#define THREADS            'A'
+#define ITERATIONS         'B'
+#define YIELD              'C'
+#define SYNC               'D'
+
+/* New versions for add function */
+#define PMUTEX             'm'
+#define SPLOCK             's'
+#define CMPSWAP            'c'           
+
 
 #define BILLION 1000000000L
 
 static long long counter;
 int opt_yield;
+char sync;
+volatile int test_lock; //DO I NEED VOLATILE? YES RIGHT?
 
 /* struct of info for ThreadFunction */
 struct threadInfo {
@@ -28,8 +37,35 @@ struct threadInfo {
     int n_iterations;
 };
 
-//Basic Add Routine
+/* Basic Add Routine */
 void add(long long *pointer, long long value)
+{
+    long long sum = *pointer + value;
+    if (opt_yield)
+      pthread_yield();
+    *pointer = sum;
+}
+
+/* Add Routine protected by a pthread_mutex */
+void add_m(long long *pointer, long long value)
+{
+    long long sum = *pointer + value;
+    if (opt_yield)
+      pthread_yield();
+    *pointer = sum;
+}
+
+/* Add Routine protected by a spin-lock */
+void add_s(long long *pointer, long long value)
+{
+    long long sum = *pointer + value;
+    if (opt_yield)
+      pthread_yield();
+    *pointer = sum;
+}
+
+/* Add Routine protected by GCC atomic __sync_ functions */
+void add_c(long long *pointer, long long value)
 {
     long long sum = *pointer + value;
     if (opt_yield)
@@ -46,13 +82,57 @@ void* ThreadFunction(void *tInfo)
     int i;
     for(i = 0; i < mydata->n_iterations; ++i)
     {
-        add(&counter, 1);
+        if(sync != '\0' && sync == PMUTEX)
+        {
+            /* Protect with a pthread_mutex */
+            pthread_mutex_t test_mutex;
+            pthread_mutex_init(&test_mutex, NULL);
+            pthread_mutex_lock(&test_mutex);
+            add(&counter, 1);
+            pthread_mutex_unlock(&test_mutex);
+        }
+        else if(sync != '\0' && sync == SPLOCK)
+        {
+            /* Protect with a spin-lock */
+            while(__sync_lock_test_and_set(&test_lock, 1))
+                continue;
+            add(&counter, 1);
+            __sync_lock_release(&test_lock);
+        }
+        else if(sync != '\0' && sync == CMPSWAP)
+        {
+            //TODO: Might need to put this in an actual add function
+        }
+        else
+            add(&counter, 1);
     }
 
     /* Add -1 to the counter */
     for (i = 0; i < mydata->n_iterations; ++i)
     {
-        add(&counter, -1);
+        if(sync != '\0' && sync == PMUTEX)
+        {
+            /* Protect with a pthread_mutex */
+            pthread_mutex_t test_mutex;
+            pthread_mutex_init(&test_mutex, NULL);
+            pthread_mutex_lock(&test_mutex);
+            add(&counter, -1);
+            pthread_mutex_unlock(&test_mutex);
+        }
+        else if(sync != '\0' && sync == SPLOCK)
+        {
+            /* Protect with a spin-lock */
+            while(__sync_lock_test_and_set(&test_lock, 1))
+                continue;
+            add(&counter, -1);
+            __sync_lock_release(&test_lock);
+        }
+        else if(sync != '\0' && sync == CMPSWAP)
+        {
+            //TODO: Might need to put this in an actual add function
+        }
+        else
+            add(&counter, -1);
     }
 
     return NULL;
@@ -66,6 +146,8 @@ int main(int argc, char **argv)
     int return_value = 0;
     counter = 0;
     opt_yield = 0;
+    sync = '\0';
+    test_lock = 0;
     struct timespec start, end;
     uint64_t timediff;
 
@@ -77,6 +159,7 @@ int main(int argc, char **argv)
           {"threads",         optional_argument, 0,          THREADS},
           {"iterations",      optional_argument, 0,          ITERATIONS},
           {"yield",           optional_argument, 0,          YIELD},
+          {"sync",            optional_argument, 0,          SYNC},
           {0, 0, 0, 0}
         };
 
@@ -100,7 +183,7 @@ int main(int argc, char **argv)
                 num_threads = atoi(optarg);
                 if( num_threads < 1 )
                 {
-                    fprintf( stderr, "%s: usage: %s NTHREADS. Using default.\n", argv[0], optarg );
+                    fprintf( stderr, "%s: usage: %s NTHREADS. Using default (1).\n", argv[0], optarg );
                     num_threads = 1;
                     return_value = 1;
                 }
@@ -111,7 +194,7 @@ int main(int argc, char **argv)
                 num_iterations = atoi(optarg);
                 if( num_iterations < 1 )
                 {
-                    fprintf( stderr, "%s: usage: %s NITERATIONS. Using default.\n", argv[0], optarg );
+                    fprintf( stderr, "%s: usage: %s NITERATIONS. Using default (1).\n", argv[0], optarg );
                     num_iterations = 1;
                     return_value = 1;
                 }
@@ -119,15 +202,24 @@ int main(int argc, char **argv)
 
             case YIELD:
               /* Set opt_yield */
-              opt_yield = atoi(optarg);
-              if( opt_yield > 1 )
+                opt_yield = atoi(optarg);
+                if( opt_yield != 1 )
                 {
-                    fprintf( stderr, "%s: usage: %s YIELD. Using default.\n", argv[0], optarg );
-                    opt_yield = 1; // TODO: What is default yield value?
+                    fprintf( stderr, "%s: usage: %s YIELD. Using default (0).\n", argv[0], optarg );
+                    opt_yield = 1; // TODO: What is default yield value? KC: I think it's 1 or 0 if not called
                     return_value = 1;
                 }
                 break;
 
+            case SYNC:
+                /* Set sync type */
+                sync = optarg;
+                if( sync != PMUTEX && sync != SPLOCK && sync != CMPSWAP )
+                {
+                    fprintf( stderr, "%s: usage: %s SYNC. Using default (NULL).\n", argv[0], optarg );
+                    sync = '\0'; // TODO: What is default yield value? KC: I think it's 1 or 0 if not called
+                    return_value = 1;
+                }
             default:
                   printf ("Error: Unrecognized command!\n");
                   return_value = 1;
