@@ -15,106 +15,123 @@
 
 #define THREADS            'a'
 #define ITERATIONS         'b'
+#define YIELD              'c'
 
 #define BILLION 1000000000L
 
 static long long counter;
+int opt_yield;
 
 /* struct of info for ThreadFunction */
-struct threadInfo{
-  long ID;
-  int n_iterations;
+struct threadInfo {
+    long ID;
+    int n_iterations;
 };
 
 //Basic Add Routine
-void add(long long *pointer, long long value) {
+void add(long long *pointer, long long value)
+{
     long long sum = *pointer + value;
+    if (opt_yield)
+      pthread_yield();
     *pointer = sum;
 }
 
-void* ThreadFunction( void *tInfo )
+void* ThreadFunction(void *tInfo)
 {
-  struct threadInfo *mydata;
-  mydata = (struct threadInfo*)tInfo;
+    struct threadInfo *mydata;
+    mydata = (struct threadInfo*) tInfo;
 
-  /* Add 1 to the counter */
-  int i;
-  for(i = 0; i < mydata->n_iterations; ++i)
-  {
-    add( &counter, 1 );
-  }
+    /* Add 1 to the counter */
+    int i;
+    for(i = 0; i < mydata->n_iterations; ++i)
+    {
+        add(&counter, 1);
+    }
 
-  /* Add -1 to the counter */
-  for (i = 0; i < mydata->n_iterations; ++i)
-  {
-      add( &counter, -1 );
-  }
+    /* Add -1 to the counter */
+    for (i = 0; i < mydata->n_iterations; ++i)
+    {
+        add(&counter, -1);
+    }
 
-  return NULL;
+    return NULL;
 }
 
-int main (int argc, char **argv)
+int main(int argc, char **argv)
 {
-	int c;
-  	int num_threads = 1;
-  	int num_iterations = 1;
+    int c;
+    int num_threads = 1;
+    int num_iterations = 1;
     int return_value = 0;
     counter = 0;
+    opt_yield = 0;
     struct timespec start, end;
     uint64_t timediff;
 
-	while (1)
+    while (1)
     {
-    	static struct option long_options[] =
+        static struct option long_options[] =
         {
           /* These options don’t set a flag. */
-          {"threads",     	 optional_argument, 0,              THREADS},
-          {"iterations",     optional_argument, 0,              ITERATIONS},
-
-          {0,            0,                 0,               0}
+          {"threads",         optional_argument, 0,          THREADS},
+          {"iterations",      optional_argument, 0,          ITERATIONS},
+          {"yield",           optional_argument, 0,          YIELD},
+          {0, 0, 0, 0}
         };
 
-    	/* getopt_long stores the option index here. */
-    	int option_index = 0;
+      /* getopt_long stores the option index here. */
+        int option_index = 0;
 
-      	/* Suppress getopt_long error messages */
-      	opterr = 0;
+          /* Suppress getopt_long error messages */
+          opterr = 0;
       
-      	/* Empty string "" since no short options allowed. */
-      	c = getopt_long (argc, argv, "",
+          /* Empty string "" since no short options allowed. */
+          c = getopt_long (argc, argv, "",
                        long_options, &option_index);
 
-      	/* Detect the end of the options. */
-      	if (c == -1)
-        	break;
+          /* Detect the end of the options. */
+          if (c == -1)
+            break;
 
-      	switch (c) {
-      		case THREADS:
-        		/* Set number of threads */
-        		num_threads = atoi(optarg);
+          switch (c) {
+              case THREADS:
+                /* Set number of threads */
+                num_threads = atoi(optarg);
                 if( num_threads < 1 )
                 {
                     fprintf( stderr, "%s: usage: %s NTHREADS. Using default.\n", argv[0], optarg );
                     num_threads = 1;
                     return_value = 1;
                 }
-        		break;
+                break;
 
-        	case ITERATIONS:
-        		/* Set number of iterations */
-        		num_iterations = atoi(optarg);
+            case ITERATIONS:
+                /* Set number of iterations */
+                num_iterations = atoi(optarg);
                 if( num_iterations < 1 )
                 {
                     fprintf( stderr, "%s: usage: %s NITERATIONS. Using default.\n", argv[0], optarg );
                     num_iterations = 1;
                     return_value = 1;
                 }
-        		break;
+                break;
 
-        	default:
-          	    printf ("Error: Unrecognized command!\n");
-          	    return_value = 1;
-      	}
+            case YIELD:
+              /* Set opt_yield */
+              opt_yield = atoi(optarg);
+              if( opt_yield > 1 )
+                {
+                    fprintf( stderr, "%s: usage: %s YIELD. Using default.\n", argv[0], optarg );
+                    opt_yield = 1; // TODO: What is default yield value?
+                    return_value = 1;
+                }
+                break;
+
+            default:
+                  printf ("Error: Unrecognized command!\n");
+                  return_value = 1;
+          }
     }
 
     /* Log to STDOUT total number of ops */
