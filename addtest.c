@@ -220,6 +220,7 @@ int main(int argc, char **argv)
                     opt_sync = '\0'; // TODO: What is default yield value? KC: I think it's 1 or 0 if not called
                     return_value = 1;
                 }
+                break;
             default:
                   printf ("Error: Unrecognized command!\n");
                   return_value = 1;
