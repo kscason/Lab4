@@ -28,7 +28,6 @@
 
 static long long counter;
 static int opt_yield;
-static char opt_sync;
 static volatile int test_lock; //DO I NEED VOLATILE? YES RIGHT?
 static pthread_mutex_t test_mutex;
 
@@ -36,6 +35,7 @@ static pthread_mutex_t test_mutex;
 struct threadInfo {
     long ID;
     int n_iterations;
+    char my_sync;
 };
 
 /* Basic Add Routine */
@@ -50,57 +50,65 @@ void add(long long *pointer, long long value)
 /* Add Routine protected by a pthread_mutex */
 void add_m(long long *pointer, long long value)
 {
+    pthread_mutex_lock(&test_mutex);
     long long sum = *pointer + value;
     if (opt_yield)
       pthread_yield();
     *pointer = sum;
+    pthread_mutex_unlock(&test_mutex);
 }
 
 /* Add Routine protected by a spin-lock */
 void add_s(long long *pointer, long long value)
 {
+    while(__sync_lock_test_and_set(&test_lock, 1))
+        continue;
     long long sum = *pointer + value;
     if (opt_yield)
       pthread_yield();
     *pointer = sum;
+    __sync_lock_release(&test_lock);
 }
 
 /* Add Routine protected by GCC atomic __sync_ functions */
 void add_c(long long *pointer, long long value)
 {
     long long sum = *pointer + value;
+    long long old = *pointer;
     if (opt_yield)
       pthread_yield();
-    *pointer = sum;
+    while(__sync_val_compare_and_swap(pointer, old, sum) != old)
+        continue;
+    //*pointer = sum;
 }
 
 void* ThreadFunction(void *tInfo)
 {
     struct threadInfo *mydata;
     mydata = (struct threadInfo*) tInfo;
+    opt_sync = mydata->my_lock;
 
     /* Add 1 to the counter */
     int i;
     for(i = 0; i < mydata->n_iterations; ++i)
     {
-        if(opt_sync != '\0' && opt_sync == PMUTEX)
+        if(opt_sync == PMUTEX)
         {
             /* Protect with a pthread_mutex */
-            pthread_mutex_lock(&test_mutex);
-            add(&counter, 1);
-            pthread_mutex_unlock(&test_mutex);
+            //NOTE COULD DO THESE HERE, BUT I THINK THEY WANT NEW FUNCTIONS
+            //pthread_mutex_lock(&test_mutex);
+            add_m(&counter, 1);
+            //pthread_mutex_unlock(&test_mutex);
         }
-        else if(opt_sync != '\0' && opt_sync == SPLOCK)
+        else if(opt_sync == SPLOCK)
         {
             /* Protect with a spin-lock */
-            while(__sync_lock_test_and_set(&test_lock, 1))
-                continue;
-            add(&counter, 1);
-            __sync_lock_release(&test_lock);
+            add_s(&counter, 1);
         }
-        else if(opt_sync != '\0' && opt_sync == CMPSWAP)
+        else if(opt_sync == CMPSWAP)
         {
             //TODO: Might need to put this in an actual add function
+            add_c(&counter, 1);
         }
         else
             add(&counter, 1);
@@ -109,27 +117,25 @@ void* ThreadFunction(void *tInfo)
     /* Add -1 to the counter */
     for (i = 0; i < mydata->n_iterations; ++i)
     {
-        if(opt_sync != '\0' && opt_sync == PMUTEX)
+        if(opt_sync == PMUTEX)
         {
             /* Protect with a pthread_mutex */
-            pthread_mutex_lock(&test_mutex);
-            add(&counter, -1);
-            pthread_mutex_unlock(&test_mutex);
+            add_m(&counter, -1);
         }
-        else if(opt_sync != '\0' && opt_sync == SPLOCK)
+        else if(opt_sync == SPLOCK)
         {
             /* Protect with a spin-lock */
-            while(__sync_lock_test_and_set(&test_lock, 1))
-                continue;
-            add(&counter, -1);
-            __sync_lock_release(&test_lock);
+            add_s(&counter, -1);
         }
-        else if(opt_sync != '\0' && opt_sync == CMPSWAP)
+        else if(opt_sync == CMPSWAP)
         {
             //TODO: Might need to put this in an actual add function
+            add_c(&counter, -1);
         }
         else
+        {
             add(&counter, -1);
+        }
     }
 
     return NULL;
@@ -140,10 +146,10 @@ int main(int argc, char **argv)
     int c;
     int num_threads = 1;
     int num_iterations = 1;
+    char opt_sync = '\0';
     int return_value = 0;
     counter = 0;
     opt_yield = 0;
-    opt_sync = '\0';
     test_lock = 0;
     pthread_mutex_init(&test_mutex, NULL);
     struct timespec start, end;
@@ -214,7 +220,7 @@ int main(int argc, char **argv)
                 opt_sync = *optarg;
                 if( opt_sync != PMUTEX && opt_sync != SPLOCK && opt_sync != CMPSWAP )
                 {
-                    fprintf( stderr, "%s: usage: %s SYNC. Using default (NULL).\n", argv[0], optarg );
+                    fprintf( stderr, "%s: usage: %s SYNC. Using default ('\0').\n", argv[0], optarg );
                     opt_sync = '\0'; // TODO: What is default yield value? KC: I think it's 1 or 0 if not called
                     return_value = 1;
                 }
@@ -242,6 +248,7 @@ int main(int argc, char **argv)
       //currently passes in thread ID, and width to go                          
       thread_info_array[t].ID = t;
       thread_info_array[t].n_iterations = num_iterations;
+      thread_info_array[t].my_lock = opt_sync;
 
       int rs = pthread_create(&threadID[t], 0, ThreadFunction, (void*)&thread_info_array[t]);
       if(rs)
