@@ -77,8 +77,10 @@ void add_c(long long *pointer, long long value)
     long long old = *pointer;
     if (opt_yield)
       pthread_yield();
+    do{
+        long long old = *pointer;
+    }
     while(__sync_val_compare_and_swap(pointer, old, sum) != old)
-        continue;
     //*pointer = sum;
 }
 
