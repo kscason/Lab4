@@ -82,7 +82,7 @@ void* ThreadFunction(void *tInfo)
     int i;
     for(i = 0; i < mydata->n_iterations; ++i)
     {
-        if(opt_sync != '\0' && sync == PMUTEX)
+        if(opt_sync != '\0' && opt_sync == PMUTEX)
         {
             /* Protect with a pthread_mutex */
             pthread_mutex_t test_mutex;
@@ -91,7 +91,7 @@ void* ThreadFunction(void *tInfo)
             add(&counter, 1);
             pthread_mutex_unlock(&test_mutex);
         }
-        else if(opt_sync != '\0' && sync == SPLOCK)
+        else if(opt_sync != '\0' && opt_sync == SPLOCK)
         {
             /* Protect with a spin-lock */
             while(__sync_lock_test_and_set(&test_lock, 1))
@@ -99,7 +99,7 @@ void* ThreadFunction(void *tInfo)
             add(&counter, 1);
             __sync_lock_release(&test_lock);
         }
-        else if(opt_sync != '\0' && sync == CMPSWAP)
+        else if(opt_sync != '\0' && opt_sync == CMPSWAP)
         {
             //TODO: Might need to put this in an actual add function
         }
@@ -110,7 +110,7 @@ void* ThreadFunction(void *tInfo)
     /* Add -1 to the counter */
     for (i = 0; i < mydata->n_iterations; ++i)
     {
-        if(opt_sync != '\0' && sync == PMUTEX)
+        if(opt_sync != '\0' && opt_sync == PMUTEX)
         {
             /* Protect with a pthread_mutex */
             pthread_mutex_t test_mutex;
@@ -119,7 +119,7 @@ void* ThreadFunction(void *tInfo)
             add(&counter, -1);
             pthread_mutex_unlock(&test_mutex);
         }
-        else if(opt_sync != '\0' && sync == SPLOCK)
+        else if(opt_sync != '\0' && opt_sync == SPLOCK)
         {
             /* Protect with a spin-lock */
             while(__sync_lock_test_and_set(&test_lock, 1))
@@ -127,7 +127,7 @@ void* ThreadFunction(void *tInfo)
             add(&counter, -1);
             __sync_lock_release(&test_lock);
         }
-        else if(opt_sync != '\0' && sync == CMPSWAP)
+        else if(opt_sync != '\0' && opt_sync == CMPSWAP)
         {
             //TODO: Might need to put this in an actual add function
         }
@@ -146,7 +146,7 @@ int main(int argc, char **argv)
     int return_value = 0;
     counter = 0;
     opt_yield = 0;
-    sync = '\0';
+    opt_sync = '\0';
     test_lock = 0;
     struct timespec start, end;
     uint64_t timediff;
@@ -214,7 +214,7 @@ int main(int argc, char **argv)
             case SYNC:
                 /* Set sync type */
                 opt_sync = *optarg;
-                if( opt_sync != PMUTEX && sync != SPLOCK && sync != CMPSWAP )
+                if( opt_sync != PMUTEX && opt_sync != SPLOCK && opt_sync != CMPSWAP )
                 {
                     fprintf( stderr, "%s: usage: %s SYNC. Using default (NULL).\n", argv[0], optarg );
                     opt_sync = '\0'; // TODO: What is default yield value? KC: I think it's 1 or 0 if not called
