@@ -86,7 +86,7 @@ void* ThreadFunction(void *tInfo)
 {
     struct threadInfo *mydata;
     mydata = (struct threadInfo*) tInfo;
-    opt_sync = mydata->my_lock;
+    char opt_sync = mydata->my_sync;
 
     /* Add 1 to the counter */
     int i;
@@ -248,7 +248,7 @@ int main(int argc, char **argv)
       //currently passes in thread ID, and width to go                          
       thread_info_array[t].ID = t;
       thread_info_array[t].n_iterations = num_iterations;
-      thread_info_array[t].my_lock = opt_sync;
+      thread_info_array[t].my_sync = opt_sync;
 
       int rs = pthread_create(&threadID[t], 0, ThreadFunction, (void*)&thread_info_array[t]);
       if(rs)
