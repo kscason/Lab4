@@ -28,7 +28,7 @@
 
 static long long counter;
 int opt_yield;
-char sync;
+char opt_sync;
 volatile int test_lock; //DO I NEED VOLATILE? YES RIGHT?
 
 /* struct of info for ThreadFunction */
@@ -82,7 +82,7 @@ void* ThreadFunction(void *tInfo)
     int i;
     for(i = 0; i < mydata->n_iterations; ++i)
     {
-        if(sync != '\0' && sync == PMUTEX)
+        if(opt_sync != '\0' && sync == PMUTEX)
         {
             /* Protect with a pthread_mutex */
             pthread_mutex_t test_mutex;
@@ -91,7 +91,7 @@ void* ThreadFunction(void *tInfo)
             add(&counter, 1);
             pthread_mutex_unlock(&test_mutex);
         }
-        else if(sync != '\0' && sync == SPLOCK)
+        else if(opt_sync != '\0' && sync == SPLOCK)
         {
             /* Protect with a spin-lock */
             while(__sync_lock_test_and_set(&test_lock, 1))
@@ -99,7 +99,7 @@ void* ThreadFunction(void *tInfo)
             add(&counter, 1);
             __sync_lock_release(&test_lock);
         }
-        else if(sync != '\0' && sync == CMPSWAP)
+        else if(opt_sync != '\0' && sync == CMPSWAP)
         {
             //TODO: Might need to put this in an actual add function
         }
@@ -110,7 +110,7 @@ void* ThreadFunction(void *tInfo)
     /* Add -1 to the counter */
     for (i = 0; i < mydata->n_iterations; ++i)
     {
-        if(sync != '\0' && sync == PMUTEX)
+        if(opt_sync != '\0' && sync == PMUTEX)
         {
             /* Protect with a pthread_mutex */
             pthread_mutex_t test_mutex;
@@ -119,7 +119,7 @@ void* ThreadFunction(void *tInfo)
             add(&counter, -1);
             pthread_mutex_unlock(&test_mutex);
         }
-        else if(sync != '\0' && sync == SPLOCK)
+        else if(opt_sync != '\0' && sync == SPLOCK)
         {
             /* Protect with a spin-lock */
             while(__sync_lock_test_and_set(&test_lock, 1))
@@ -127,7 +127,7 @@ void* ThreadFunction(void *tInfo)
             add(&counter, -1);
             __sync_lock_release(&test_lock);
         }
-        else if(sync != '\0' && sync == CMPSWAP)
+        else if(opt_sync != '\0' && sync == CMPSWAP)
         {
             //TODO: Might need to put this in an actual add function
         }
@@ -213,11 +213,11 @@ int main(int argc, char **argv)
 
             case SYNC:
                 /* Set sync type */
-                sync = optarg;
-                if( sync != PMUTEX && sync != SPLOCK && sync != CMPSWAP )
+                opt_sync = *optarg;
+                if( opt_sync != PMUTEX && sync != SPLOCK && sync != CMPSWAP )
                 {
                     fprintf( stderr, "%s: usage: %s SYNC. Using default (NULL).\n", argv[0], optarg );
-                    sync = '\0'; // TODO: What is default yield value? KC: I think it's 1 or 0 if not called
+                    opt_sync = '\0'; // TODO: What is default yield value? KC: I think it's 1 or 0 if not called
                     return_value = 1;
                 }
             default:
