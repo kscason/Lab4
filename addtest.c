@@ -86,7 +86,6 @@ void* ThreadFunction(void *tInfo)
         if(opt_sync != '\0' && opt_sync == PMUTEX)
         {
             /* Protect with a pthread_mutex */
-            pthread_mutex_init(&test_mutex, NULL);
             pthread_mutex_lock(&test_mutex);
             add(&counter, 1);
             pthread_mutex_unlock(&test_mutex);
@@ -113,8 +112,6 @@ void* ThreadFunction(void *tInfo)
         if(opt_sync != '\0' && opt_sync == PMUTEX)
         {
             /* Protect with a pthread_mutex */
-            pthread_mutex_t test_mutex;
-            pthread_mutex_init(&test_mutex, NULL);
             pthread_mutex_lock(&test_mutex);
             add(&counter, -1);
             pthread_mutex_unlock(&test_mutex);
@@ -148,6 +145,7 @@ int main(int argc, char **argv)
     opt_yield = 0;
     opt_sync = '\0';
     test_lock = 0;
+    pthread_mutex_init(&test_mutex, NULL);
     struct timespec start, end;
     uint64_t timediff;
 
