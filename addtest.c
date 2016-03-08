@@ -13,8 +13,8 @@
 #include <time.h>
 
 
-#define THREADS   	   'a'
-#define ITERATIONS     'b'
+#define THREADS            'a'
+#define ITERATIONS         'b'
 
 #define BILLION 1000000000L
 
@@ -164,7 +164,7 @@ int main (int argc, char **argv)
         fprintf(stderr, "ERROR: final count = %lld\n", counter);
 
     /* Log to STDOUT runtime (ns), average time/op (ns) */
-    fprintf(stdout, "elapsed time: %llu ns\n per operation: %llu ns\n", 
+    fprintf(stdout, "elapsed time: %lu ns\nper operation: %lu ns\n", 
         timediff, timediff/(uint64_t)(num_threads*num_iterations*2));
 
     return return_value;

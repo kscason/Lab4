@@ -1,5 +1,5 @@
-addtest: addtest.o
-	gcc -lrt -o addtest addtest.o
+addtest: addtest.c
+	gcc -lrt -pthread -o addtest addtest.c
 
-addtest.o: addtest.c
-	gcc -c -std=gnu11 -Wall addtest.c
+clean:
+	rm -rf addtest
