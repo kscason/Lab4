@@ -27,9 +27,10 @@
 #define BILLION 1000000000L
 
 static long long counter;
-int opt_yield;
-char opt_sync;
-volatile int test_lock; //DO I NEED VOLATILE? YES RIGHT?
+static int opt_yield;
+static char opt_sync;
+static volatile int test_lock; //DO I NEED VOLATILE? YES RIGHT?
+static pthread_mutex_t test_mutex;
 
 /* struct of info for ThreadFunction */
 struct threadInfo {
@@ -85,7 +86,6 @@ void* ThreadFunction(void *tInfo)
         if(opt_sync != '\0' && opt_sync == PMUTEX)
         {
             /* Protect with a pthread_mutex */
-            pthread_mutex_t test_mutex;
             pthread_mutex_init(&test_mutex, NULL);
             pthread_mutex_lock(&test_mutex);
             add(&counter, 1);
@@ -221,6 +221,7 @@ int main(int argc, char **argv)
                     return_value = 1;
                 }
                 break;
+
             default:
                   printf ("Error: Unrecognized command!\n");
                   return_value = 1;
