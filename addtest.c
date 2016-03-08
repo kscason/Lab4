@@ -7,7 +7,8 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdint.h> 
+#include <stdint.h>
+#include <stdbool.h> // MIGHT NOT NEED 
 #include <getopt.h>
 #include <pthread.h>
 #include <time.h>
@@ -28,7 +29,7 @@
 
 static long long counter;
 static int opt_yield;
-static volatile int test_lock; //DO I NEED VOLATILE? YES RIGHT?
+static volatile int test_lock; //DO I NEED VOLATILE? YES RIGHT? A: yeah im p sure
 static pthread_mutex_t test_mutex;
 
 /* struct of info for ThreadFunction */
@@ -74,17 +75,19 @@ void add_s(long long *pointer, long long value)
 void add_c(long long *pointer, long long value)
 {
     long long sum = *pointer + value;
+
     if (opt_yield)
       pthread_yield();
+
     long long old = *pointer;
     long long retval;
+
     do{ //TODO: It's late and I don't really understand why all these need to be in here. Just toyed with this forever. Figure it out later.
         old = *pointer;
         sum = old + value;
         retval = __sync_val_compare_and_swap(pointer, old, sum);
     } while(retval != old);
     
-    //*pointer = sum;
 }
 
 void* ThreadFunction(void *tInfo)
@@ -100,10 +103,7 @@ void* ThreadFunction(void *tInfo)
         if(opt_sync == PMUTEX)
         {
             /* Protect with a pthread_mutex */
-            //NOTE COULD DO THESE HERE, BUT I THINK THEY WANT NEW FUNCTIONS
-            //pthread_mutex_lock(&test_mutex);
             add_m(&counter, 1);
-            //pthread_mutex_unlock(&test_mutex);
         }
         else if(opt_sync == SPLOCK)
         {
@@ -112,7 +112,6 @@ void* ThreadFunction(void *tInfo)
         }
         else if(opt_sync == CMPSWAP)
         {
-            //TODO: Might need to put this in an actual add function
             add_c(&counter, 1);
         }
         else
@@ -134,7 +133,6 @@ void* ThreadFunction(void *tInfo)
         }
         else if(opt_sync == CMPSWAP)
         {
-            //TODO: Might need to put this in an actual add function
             add_c(&counter, -1);
         }
         else
@@ -215,7 +213,7 @@ int main(int argc, char **argv)
                 if( opt_yield != 1 )
                 {
                     fprintf( stderr, "%s: usage: %s YIELD. Using default (0).\n", argv[0], optarg );
-                    opt_yield = 1; // TODO: What is default yield value? KC: I think it's 1 or 0 if not called
+                    opt_yield = 1;
                     return_value = 1;
                 }
                 break;
@@ -226,7 +224,7 @@ int main(int argc, char **argv)
                 if( opt_sync != PMUTEX && opt_sync != SPLOCK && opt_sync != CMPSWAP )
                 {
                     fprintf( stderr, "%s: usage: %s SYNC. Using default ('\0').\n", argv[0], optarg );
-                    opt_sync = '\0'; // TODO: What is default yield value? KC: I think it's 1 or 0 if not called
+                    opt_sync = '\0';
                     return_value = 1;
                 }
                 break;
