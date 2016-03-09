@@ -9,6 +9,10 @@
  *  only a list head.  The list head is also recognizable because
  *  it has a NULL key pointer.
  */
+
+#include <pthread.h>
+#include <string.h>
+
 struct SortedListElement {
     struct SortedListElement *prev;
     struct SortedListElement *next;

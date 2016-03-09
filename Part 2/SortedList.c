@@ -5,21 +5,23 @@ void SortedList_insert(SortedList_t *list, SortedListElement_t *element)
     if (!list || !element)
         return;
 
-    int i = 0; // Start at 0 or 1?
-    int length = SortedList_length(list);
     SortedListElement_t *curNode = list;
 
-    while (i != length)
+    // First node
+    if (SortedList_length(list) == 0)
     {
-        if (element->)
-
-
-        i++;
+        list->next = element;
+        list->prev = NULL;
+        element->prev = list;
+        element->next = NULL;
+        return;
     }
+
+    while (strcmp(curNode))
 
 }
 
-int SortedList_delete( SortedListElement_t *element)
+int SortedList_delete(SortedListElement_t *element)
 {
 
 }
