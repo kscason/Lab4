@@ -82,7 +82,7 @@ void add_c(long long *pointer, long long value)
     long long old = *pointer;
     long long retval;
 
-    do{ //TODO: It's late and I don't really understand why all these need to be in here. Just toyed with this forever. Figure it out later.
+    do{ 
         old = *pointer;
         sum = old + value;
         retval = __sync_val_compare_and_swap(pointer, old, sum);
@@ -221,7 +221,7 @@ int main(int argc, char **argv)
             case SYNC:
                 /* Set sync type */
                 opt_sync = *optarg;
-                if( opt_sync != PMUTEX && opt_sync != SPLOCK && opt_sync != CMPSWAP )
+                if( opt_sync != PMUTEX && opt_sync != SPLOCK && opt_sync != CMPSWAP && opt_sync != '\0')
                 {
                     fprintf( stderr, "%s: usage: %s SYNC. Using default ('\0').\n", argv[0], optarg );
                     opt_sync = '\0';
