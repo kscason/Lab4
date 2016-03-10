@@ -12,7 +12,7 @@ void SortedList_insert(SortedList_t *list, SortedListElement_t *element)
     {
         list->next = element;
         list->prev = NULL;
-        if (opt_yield && INSERT_YIELD)
+        if (opt_yield & INSERT_YIELD)
             pthread_yield();
         element->prev = list;
         element->next = NULL;
@@ -34,7 +34,7 @@ void SortedList_insert(SortedList_t *list, SortedListElement_t *element)
         {
             curNode->next = element;
             element->prev = curNode;
-            if (opt_yield && INSERT_YIELD)
+            if (opt_yield & INSERT_YIELD)
                 pthread_yield();
             element->next = NULL;
             return;
@@ -43,7 +43,7 @@ void SortedList_insert(SortedList_t *list, SortedListElement_t *element)
         {
             element->next = curNode;
             curNode->prev->next = element;
-            if (opt_yield && INSERT_YIELD)
+            if (opt_yield & INSERT_YIELD)
                 pthread_yield();
             element->prev = curNode->prev;
             curNode->prev = element;
@@ -54,7 +54,7 @@ void SortedList_insert(SortedList_t *list, SortedListElement_t *element)
     {
         element->next = curNode;
         curNode->prev->next = element;
-        if (opt_yield && INSERT_YIELD)
+        if (opt_yield & INSERT_YIELD)
                 pthread_yield();
         element->prev = curNode->prev;
         curNode->prev = element;
@@ -106,7 +106,7 @@ SortedListElement_t *SortedList_lookup(SortedList_t *list, const char *key)
     {
         if (strcmp(key, curNode->key) == 0)
             return curNode;
-        if (opt_yield && SEARCH_YIELD)
+        if (opt_yield & SEARCH_YIELD)
                 pthread_yield();
         curNode = curNode->next;
     }
@@ -128,7 +128,7 @@ int SortedList_length(SortedList_t *list)
     {
         length++;
         SortedListElement_t *prevNode = curNode;
-        if (opt_yield && SEARCH_YIELD)
+        if (opt_yield & SEARCH_YIELD)
             pthread_yield();
         curNode = curNode->next;
         if (prevNode->next != curNode->prev)
