@@ -78,7 +78,6 @@ void* ThreadFunction(void *tInfo)
     {
     	SortedListElement_t *toDelete = SortedList_lookup(list, keys[element_start+i]);
 		SortedList_delete(toDelete);
-        printf("Length after delete: %d\n", SortedList_length(list));
 	}
 
 
