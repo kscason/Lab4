@@ -14,11 +14,13 @@
 #define ITERATIONS         'B'
 #define YIELD              'C'
 #define SYNC               'D'
+#define LISTS			   'E'
 
 #define KEY_SIZE 10
 #define BILLION 1000000000L
 
 int opt_yield = 0;
+int num_lists;
 SortedList_t* list;
 SortedList_t* elements;
 char** keys;
@@ -31,6 +33,17 @@ struct threadInfo {
     int n_iterations;
     //char my_sync;
 };
+
+/* Simple hash of the key */
+int hash(const char* key)
+{
+	int value = 0;
+	for(int i = 0; i < strlen(key); ++i)
+	{
+		value += (int)key[i];
+	}
+	return value % num_lists;
+}
 
 /* Generate random keys */
 char* create_key(int index)
@@ -65,7 +78,7 @@ void* ThreadFunction(void *tInfo)
     int i;
     for(i = 0; i < mydata->n_iterations; ++i) 
     {
-		SortedList_insert(list, &elements[element_start+i]);
+		SortedList_insert(&list[hash(elements[element_start+i].key)], &elements[element_start+i]);
 	}
 
 	/* Grabs list length */
@@ -74,13 +87,13 @@ void* ThreadFunction(void *tInfo)
 	/* Look up each added key and delete the returned element from list */
     for(i = 0; i < mydata->n_iterations; ++i)
     {
-    	SortedListElement_t *toDelete = SortedList_lookup(list, keys[element_start+i]);
+    	SortedListElement_t *toDelete = SortedList_lookup(&list[hash(elements[element_start+i].key)], keys[element_start+i]);
 		SortedList_delete(toDelete);
-        printf("Length after delete: %d\n", SortedList_length(list));
 	}
 	return NULL;
 }
 
+/* Method protected by a pthread_mutex */
 void* ThreadFunction_m(void *tInfo)
 {
     struct threadInfo *mydata;
@@ -93,7 +106,7 @@ void* ThreadFunction_m(void *tInfo)
     for(i = 0; i < mydata->n_iterations; ++i) 
     {
     	pthread_mutex_lock(&test_mutex);
-		SortedList_insert(list, &elements[element_start+i]);
+		SortedList_insert(&list[hash(elements[element_start+i].key)], &elements[element_start+i]);
 		pthread_mutex_unlock(&test_mutex);
 	}
 
@@ -104,14 +117,14 @@ void* ThreadFunction_m(void *tInfo)
     for(i = 0; i < mydata->n_iterations; ++i)
     {
     	pthread_mutex_lock(&test_mutex);
-    	SortedListElement_t *toDelete = SortedList_lookup(list, keys[element_start+i]);
+    	SortedListElement_t *toDelete = SortedList_lookup(&list[hash(elements[element_start+i].key)], keys[element_start+i]);
 		SortedList_delete(toDelete);
 		pthread_mutex_unlock(&test_mutex);
-        printf("Length after delete: %d\n", SortedList_length(list));
 	}
 	return NULL;
 }
 
+/* Method protected by a spin-lock */
 void* ThreadFunction_s(void *tInfo)
 {
     struct threadInfo *mydata;
@@ -125,7 +138,7 @@ void* ThreadFunction_s(void *tInfo)
     {
     	while(__sync_lock_test_and_set(&test_lock, 1))
         	continue;
-		SortedList_insert(list, &elements[element_start+i]);
+		SortedList_insert(&list[hash(elements[element_start+i].key)], &elements[element_start+i]);
 		__sync_lock_release(&test_lock);
 	}
 
@@ -137,10 +150,9 @@ void* ThreadFunction_s(void *tInfo)
     {
     	while(__sync_lock_test_and_set(&test_lock, 1))
         	continue;
-    	SortedListElement_t *toDelete = SortedList_lookup(list, keys[element_start+i]);
+    	SortedListElement_t *toDelete = SortedList_lookup(&list[hash(elements[element_start+i].key)], keys[element_start+i]);
 		SortedList_delete(toDelete);
 		__sync_lock_release(&test_lock);
-        printf("Length after delete: %d\n", SortedList_length(list));
 	}
 	return NULL;
 }
@@ -151,7 +163,7 @@ int main(int argc, char **argv)
     //int length;
     int num_threads = 1;
     int num_iterations = 1;
-    int num_lists = 1;
+    num_lists = 1;
     char opt_sync = '\0';
     int return_value = 0;
     test_lock = 0;
@@ -168,6 +180,7 @@ int main(int argc, char **argv)
           {"iterations",      optional_argument, 0,          ITERATIONS},
           {"yield",           optional_argument, 0,          YIELD},
           {"sync",            optional_argument, 0,          SYNC},
+          {"lists",           optional_argument, 0,          LISTS},
           {0, 0, 0, 0}
         };
 
@@ -210,7 +223,6 @@ int main(int argc, char **argv)
 
             case YIELD:
               /* Set opt_yield */
-                //opt_yield = atoi(optarg);
                 if( strlen(optarg) < 1 || strlen(optarg) > 3 )
                 {
                     fprintf( stderr, "%s: usage: %s YIELD. Using default (NONE).\n", argv[0], optarg );
@@ -259,6 +271,17 @@ int main(int argc, char **argv)
                 }
                 break;
 
+            case LISTS:
+            	/* Break the sorted list into sub-lists */
+            	num_lists = atoi(optarg);
+                if( num_lists < 1 )
+                {
+                    fprintf( stderr, "%s: usage: %s NLISTS. Using default (1).\n", argv[0], optarg );
+                    num_lists = 1;
+                    return_value = 1;
+                }
+            	break;
+
             default:
                   printf ("Error: Unrecognized command!\n");
                   return_value = 1;
@@ -267,7 +290,7 @@ int main(int argc, char **argv)
 
     /* Log to STDOUT total number of ops */
     fprintf(stdout, "%d threads x %d iterations x (ins + lookup/del) x (100/2 avg len) = %d operations\n", 
-        num_threads, num_iterations, (num_threads*num_iterations*2*10));
+        num_threads, num_iterations, (num_threads*num_iterations*2*num_iterations/num_lists));
 
     /* Initialize the empty list */
     list = malloc(sizeof(SortedList_t)*num_lists);
@@ -360,11 +383,11 @@ int main(int argc, char **argv)
     /* Log to STDERR if length of list isn't 0 */
     //length = SortedList_length(list);
     if(SortedList_length(list))
-        fprintf(stderr, "ERROR: final length = %d\n", length);
+        fprintf(stderr, "ERROR: final length = %d\n", SortedList_length(list));
 
     /* Log to STDOUT runtime (ns), average time/op (ns) */
     fprintf(stdout, "elapsed time: %lu ns\nper operation: %lu ns\n", 
-        timediff, timediff/(uint64_t)(num_threads*num_iterations*2));
+        timediff, timediff/(uint64_t)(num_threads*num_iterations*2*num_iterations/num_lists));
 
     return return_value;
 }
