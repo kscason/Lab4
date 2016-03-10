@@ -119,16 +119,19 @@ SortedListElement_t *SortedList_lookup(SortedList_t *list, const char *key)
 
 int SortedList_length(SortedList_t *list)
 {
+    int i;
     int length = 0;
     SortedListElement_t *curNode;
 
     if (list == NULL)
         return -1;
 
-    int i;
     for(i = 0; i < num_lists; ++i)
     {
-        curNode = &list[i]; //if error add this in (SortedListElement_t *)
+        curNode = &list[i];
+
+        if (curNode == NULL)
+            break;
 
         while (curNode->next != NULL)
         {
@@ -136,10 +139,15 @@ int SortedList_length(SortedList_t *list)
             SortedListElement_t *prevNode = curNode;
             if (opt_yield & SEARCH_YIELD)
                 pthread_yield();
+            if (curNode == NULL)
+                break;;
             curNode = curNode->next;
+            if (curNode == NULL || prevNode == NULL)
+                break;
             if (prevNode->next == NULL || curNode->prev == NULL)
                 return -1;
         }
     }
+
     return length;
 }

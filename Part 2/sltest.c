@@ -36,7 +36,8 @@ struct threadInfo {
 int hash(const char* key)
 {
 	int value = 0;
-	for(int i = 0; i < strlen(key); ++i)
+    int i;
+	for(i = 0; i < strlen(key); ++i)
 	{
 		value += (int)key[i];
 	}
