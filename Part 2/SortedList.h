@@ -47,7 +47,7 @@ void SortedList_insert(SortedList_t *list, SortedListElement_t *element);
  *
  * @param SortedListElement_t *element ... element to be removed
  *
- * @return 0: element deleted successfully, 1: corrtuped prev/next pointers
+ * @return 0: element deleted successfully, 1: corrupted prev/next pointers
  *
  * Note: if (opt_yield & DELETE_YIELD)
  *      call pthread_yield in middle of critical section
