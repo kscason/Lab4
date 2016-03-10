@@ -125,18 +125,21 @@ int SortedList_length(SortedList_t *list)
     if (list == NULL)
         return -1;
 
-    curNode = (SortedListElement_t *) list;
-
-    while (curNode->next != NULL)
+    int i;
+    for(i = 0; i < num_lists; ++i)
     {
-        length++;
-        SortedListElement_t *prevNode = curNode;
-        if (opt_yield & SEARCH_YIELD)
-            pthread_yield();
-        curNode = curNode->next;
-        if (prevNode->next == NULL || curNode->prev == NULL)
-            return -1;
-    }
+        curNode = &list[i]; //if error add this in (SortedListElement_t *)
 
+        while (curNode->next != NULL)
+        {
+            length++;
+            SortedListElement_t *prevNode = curNode;
+            if (opt_yield & SEARCH_YIELD)
+                pthread_yield();
+            curNode = curNode->next;
+            if (prevNode->next == NULL || curNode->prev == NULL)
+                return -1;
+        }
+    }
     return length;
 }

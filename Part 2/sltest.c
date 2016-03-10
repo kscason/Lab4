@@ -3,7 +3,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
-#include <stdbool.h> // MIGHT NOT NEED 
 #include <getopt.h>
 #include <pthread.h>
 #include <time.h>
@@ -31,7 +30,6 @@ static pthread_mutex_t test_mutex;
 struct threadInfo {
     long ID;
     int n_iterations;
-    //char my_sync;
 };
 
 /* Simple hash of the key */
@@ -71,7 +69,6 @@ void* ThreadFunction(void *tInfo)
 {
     struct threadInfo *mydata;
     mydata = (struct threadInfo*) tInfo;
-    //char opt_sync = mydata->my_sync;
     int element_start = mydata->ID * mydata->n_iterations;
 
     /* Insert each of its elements into list */
@@ -98,7 +95,6 @@ void* ThreadFunction_m(void *tInfo)
 {
     struct threadInfo *mydata;
     mydata = (struct threadInfo*) tInfo;
-    //char opt_sync = mydata->my_sync;
     int element_start = mydata->ID * mydata->n_iterations;
 
     /* Insert each of its elements into list */
@@ -129,7 +125,6 @@ void* ThreadFunction_s(void *tInfo)
 {
     struct threadInfo *mydata;
     mydata = (struct threadInfo*) tInfo;
-    //char opt_sync = mydata->my_sync;
     int element_start = mydata->ID * mydata->n_iterations;
 
     /* Insert each of its elements into list */
@@ -160,7 +155,6 @@ void* ThreadFunction_s(void *tInfo)
 int main(int argc, char **argv)
 {
     int c;
-    //int length;
     int num_threads = 1;
     int num_iterations = 1;
     num_lists = 1;
@@ -346,7 +340,6 @@ int main(int argc, char **argv)
     {                        
       	thread_info_array[t].ID = t;
       	thread_info_array[t].n_iterations = num_iterations;
-      	//thread_info_array[t].my_sync = opt_sync;
 
       	/* Check for synchronization */
       	int rs;
@@ -381,7 +374,6 @@ int main(int argc, char **argv)
     timediff = BILLION * (end.tv_sec - start.tv_sec) + end.tv_nsec - start.tv_nsec;
 
     /* Log to STDERR if length of list isn't 0 */
-    //length = SortedList_length(list);
     if(SortedList_length(list))
         fprintf(stderr, "ERROR: final length = %d\n", SortedList_length(list));
 

@@ -8,7 +8,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
-#include <stdbool.h> // MIGHT NOT NEED 
 #include <getopt.h>
 #include <pthread.h>
 #include <time.h>
@@ -29,7 +28,7 @@
 
 static long long counter;
 static int opt_yield;
-static volatile int test_lock; //DO I NEED VOLATILE? YES RIGHT? A: yeah im p sure
+static volatile int test_lock;
 static pthread_mutex_t test_mutex;
 
 /* struct of info for ThreadFunction */

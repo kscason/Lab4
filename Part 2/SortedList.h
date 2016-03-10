@@ -88,6 +88,7 @@ int SortedList_length(SortedList_t *list);
  * variable to enable diagnositc calls to pthread_yield
  */
 extern int opt_yield;
+extern int num_lists;
 #define INSERT_YIELD    0x01    // yield in insert critical section
 #define DELETE_YIELD    0x02    // yield in delete critical section
 #define SEARCH_YIELD    0x04    // yield in lookup/length critical section
