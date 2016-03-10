@@ -31,18 +31,24 @@ char** keys;
 struct threadInfo {
     long ID;
     int n_iterations;
-    //char my_sync;
+    char my_sync;
 };
 
 /* Generate random keys */
 char* create_key(int index)
 {
 	keys[index] = malloc(sizeof(char)*KEY_SIZE);
-	for(int j = 0; j < KEY_SIZE; ++j)
+    if( keys == NULL )
+    {
+        fprintf(stderr, "Error allocating memory. Aborting\n");
+        exit(-1);
+    }
+    int j;
+	for(j = 0; j < KEY_SIZE; ++j)
 	{
 		if(j == KEY_SIZE - 1)
 		{
-			keys[i][j] = '\0';
+			keys[index][j] = '\0';
 			continue;
 		}
 		keys[index][j] = '!' + (rand() % 93); //from '!' to '}'
@@ -55,13 +61,13 @@ void* ThreadFunction(void *tInfo)
     struct threadInfo *mydata;
     mydata = (struct threadInfo*) tInfo;
     //char opt_sync = mydata->my_sync;
-    int element_start = mydata->ID * mydata->num_iterations;
+    int element_start = mydata->ID * mydata->n_iterations;
 
     /* Insert each of its elements into list */
     int i;
     for(i = 0; i < mydata->n_iterations; ++i) 
     {
-		SortedList_insert(list, elements[element_start+i]);
+		SortedList_insert(list, &elements[element_start+i]);
 	}
 
 	/* Grabs list length */
@@ -70,18 +76,22 @@ void* ThreadFunction(void *tInfo)
 	/* Look up each added key and delete the returned element from list */
     for(i = 0; i < mydata->n_iterations; ++i)
     {
-    	SortedListElement_t toDelete = SortedList_lookup(list, keys[element_start+i]);
+    	SortedListElement_t *toDelete = SortedList_lookup(list, keys[element_start+i]);
 		SortedList_delete(toDelete);
+        printf("Length after delete: %d\n", SortedList_length(list));
 	}
+
+
 }
 
 int main(int argc, char **argv)
 {
     int c;
+    int length;
     int num_threads = 1;
     int num_iterations = 1;
     int num_lists = 1;
-    //char opt_sync = '\0';
+    char opt_sync = '\0';
     int return_value = 0;
     //test_lock = 0;
     //pthread_mutex_init(&test_mutex, NULL);
@@ -180,7 +190,7 @@ int main(int argc, char **argv)
             case SYNC:
                 /* Set sync type */
                 opt_sync = *optarg;
-                if( opt_sync != PMUTEX && opt_sync != SPLOCK && opt_sync != CMPSWAP && opt_sync != '\0')
+                if( opt_sync != PMUTEX && opt_sync != SPLOCK && opt_sync != '\0')
                 {
                     fprintf( stderr, "%s: usage: %s SYNC. Using default ('\0').\n", argv[0], optarg );
                     opt_sync = '\0';
@@ -196,7 +206,7 @@ int main(int argc, char **argv)
 
     /* Log to STDOUT total number of ops */
     fprintf(stdout, "%d threads x %d iterations x (ins + lookup/del) x (100/2 avg len) = %d operations\n", 
-        num_threads, num_iterations, (num_threads*num_iterations*2*));
+        num_threads, num_iterations, (num_threads*num_iterations*2*10));
 
     /* Initialize the empty list */
     list = malloc(sizeof(SortedList_t)*num_lists);
@@ -252,7 +262,7 @@ int main(int argc, char **argv)
     {                        
       	thread_info_array[t].ID = t;
       	thread_info_array[t].n_iterations = num_iterations;
-      	//thread_info_array[t].my_sync = opt_sync;
+      	thread_info_array[t].my_sync = opt_sync;
 
       	int rs = pthread_create(&threadID[t], 0, ThreadFunction, (void*)&thread_info_array[t]);
       	if(rs)
@@ -279,9 +289,10 @@ int main(int argc, char **argv)
 
     timediff = BILLION * (end.tv_sec - start.tv_sec) + end.tv_nsec - start.tv_nsec;
 
-    /* Log to STDERR if counter value isn't 0 */
-    if(counter)
-        fprintf(stderr, "ERROR: final count = %lld\n", counter);
+    /* Log to STDERR if length of list isn't 0 */
+    length = SortedList_length(list);
+    if(length != 0)
+        fprintf(stderr, "ERROR: final length = %d\n", length);
 
     /* Log to STDOUT runtime (ns), average time/op (ns) */
     fprintf(stdout, "elapsed time: %lu ns\nper operation: %lu ns\n", 

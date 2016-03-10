@@ -97,13 +97,16 @@ int SortedList_delete(SortedListElement_t *element)
 SortedListElement_t *SortedList_lookup(SortedList_t *list, const char *key)
 {
     // Can't find the element in a corrupted or empty list
-    if (list == NULL || SortedList_length(list) == 0)
+    if (key == NULL || list == NULL || SortedList_length(list) == 0)
         return NULL;
 
     SortedListElement_t *curNode = list;
 
     while (curNode != NULL)
     {
+        if (curNode->key == NULL)
+            return NULL;
+
         if (strcmp(key, curNode->key) == 0)
             return curNode;
         if (opt_yield & SEARCH_YIELD)
@@ -131,7 +134,7 @@ int SortedList_length(SortedList_t *list)
         if (opt_yield & SEARCH_YIELD)
             pthread_yield();
         curNode = curNode->next;
-        if (prevNode->next != curNode->prev)
+        if (prevNode->next == NULL || curNode->prev == NULL)
             return -1;
     }
 
