@@ -100,7 +100,7 @@ SortedListElement_t *SortedList_lookup(SortedList_t *list, const char *key)
     if (key == NULL || list == NULL || SortedList_length(list) == 0)
         return NULL;
 
-    SortedListElement_t *curNode = list;
+    SortedListElement_t *curNode = list->next;
 
     while (curNode != NULL)
     {
