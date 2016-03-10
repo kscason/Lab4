@@ -15,10 +15,6 @@
 #define YIELD              'C'
 #define SYNC               'D'
 
-/* Lock primitives */
-#define PMUTEX             'm'
-#define SPLOCK             's'
-
 #define KEY_SIZE 10
 #define BILLION 1000000000L
 
@@ -26,12 +22,14 @@ int opt_yield = 0;
 SortedList_t* list;
 SortedList_t* elements;
 char** keys;
+static volatile int test_lock;
+static pthread_mutex_t test_mutex;
 
 /* struct of info for ThreadFunction */
 struct threadInfo {
     long ID;
     int n_iterations;
-    char my_sync;
+    //char my_sync;
 };
 
 /* Generate random keys */
@@ -79,21 +77,84 @@ void* ThreadFunction(void *tInfo)
     	SortedListElement_t *toDelete = SortedList_lookup(list, keys[element_start+i]);
 		SortedList_delete(toDelete);
 	}
+	return NULL;
+}
 
+void* ThreadFunction_m(void *tInfo)
+{
+    struct threadInfo *mydata;
+    mydata = (struct threadInfo*) tInfo;
+    //char opt_sync = mydata->my_sync;
+    int element_start = mydata->ID * mydata->n_iterations;
 
+    /* Insert each of its elements into list */
+    int i;
+    for(i = 0; i < mydata->n_iterations; ++i) 
+    {
+    	pthread_mutex_lock(&test_mutex);
+		SortedList_insert(list, &elements[element_start+i]);
+		pthread_mutex_unlock(&test_mutex);
+	}
+
+	/* Grabs list length */
+	int length = SortedList_length(list);
+
+	/* Look up each added key and delete the returned element from list */
+    for(i = 0; i < mydata->n_iterations; ++i)
+    {
+    	pthread_mutex_lock(&test_mutex);
+    	SortedListElement_t *toDelete = SortedList_lookup(list, keys[element_start+i]);
+		SortedList_delete(toDelete);
+		pthread_mutex_unlock(&test_mutex);
+        printf("Length after delete: %d\n", SortedList_length(list));
+	}
+	return NULL;
+}
+
+void* ThreadFunction_s(void *tInfo)
+{
+    struct threadInfo *mydata;
+    mydata = (struct threadInfo*) tInfo;
+    //char opt_sync = mydata->my_sync;
+    int element_start = mydata->ID * mydata->n_iterations;
+
+    /* Insert each of its elements into list */
+    int i;
+    for(i = 0; i < mydata->n_iterations; ++i) 
+    {
+    	while(__sync_lock_test_and_set(&test_lock, 1))
+        	continue;
+		SortedList_insert(list, &elements[element_start+i]);
+		__sync_lock_release(&test_lock);
+	}
+
+	/* Grabs list length */
+	int length = SortedList_length(list);
+
+	/* Look up each added key and delete the returned element from list */
+    for(i = 0; i < mydata->n_iterations; ++i)
+    {
+    	while(__sync_lock_test_and_set(&test_lock, 1))
+        	continue;
+    	SortedListElement_t *toDelete = SortedList_lookup(list, keys[element_start+i]);
+		SortedList_delete(toDelete);
+		__sync_lock_release(&test_lock);
+        printf("Length after delete: %d\n", SortedList_length(list));
+	}
+	return NULL;
 }
 
 int main(int argc, char **argv)
 {
     int c;
-    int length;
+    //int length;
     int num_threads = 1;
     int num_iterations = 1;
     int num_lists = 1;
     char opt_sync = '\0';
     int return_value = 0;
-    //test_lock = 0;
-    //pthread_mutex_init(&test_mutex, NULL);
+    test_lock = 0;
+    pthread_mutex_init(&test_mutex, NULL);
     struct timespec start, end;
     uint64_t timediff;
 
@@ -104,8 +165,8 @@ int main(int argc, char **argv)
           /* These options don’t set a flag. */
           {"threads",         optional_argument, 0,          THREADS},
           {"iterations",      optional_argument, 0,          ITERATIONS},
-          //{"yield",           optional_argument, 0,          YIELD},
-          //{"sync",            optional_argument, 0,          SYNC},
+          {"yield",           optional_argument, 0,          YIELD},
+          {"sync",            optional_argument, 0,          SYNC},
           {0, 0, 0, 0}
         };
 
@@ -157,31 +218,31 @@ int main(int argc, char **argv)
                 }
                 /* Check first character */
                 if(optarg[0] == 'i')
-                	opt_yield &= INSERT_YIELD;
+                	opt_yield |= INSERT_YIELD;
                 else if(optarg[0] == 'd')
-                	opt_yield &= DELETE_YIELD;
+                	opt_yield |= DELETE_YIELD;
                 else if(optarg[0] == 's')
-                	opt_yield &= SEARCH_YIELD;
+                	opt_yield |= SEARCH_YIELD;
 
                 /* Check second character (if present) */
                 if(sizeof(optarg) > 1)
                 {
                 	if(optarg[1] == 'i')
-                		opt_yield &= INSERT_YIELD;
+                		opt_yield |= INSERT_YIELD;
                 	else if(optarg[1] == 'd')
-                		opt_yield &= DELETE_YIELD;
+                		opt_yield |= DELETE_YIELD;
                 	else if(optarg[1] == 's')
-                		opt_yield &= SEARCH_YIELD;
+                		opt_yield |= SEARCH_YIELD;
  
                 	/* Check third character (if present) */
                 	if(sizeof(optarg) == 3)
                 	{
                 		if(optarg[2] == 'i')
-                		opt_yield &= INSERT_YIELD;
+                		opt_yield |= INSERT_YIELD;
                 	else if(optarg[2] == 'd')
-                		opt_yield &= DELETE_YIELD;
+                		opt_yield |= DELETE_YIELD;
                 	else if(optarg[2] == 's')
-                		opt_yield &= SEARCH_YIELD;
+                		opt_yield |= SEARCH_YIELD;
                 	}
                 }
                 break;
@@ -189,7 +250,7 @@ int main(int argc, char **argv)
             case SYNC:
                 /* Set sync type */
                 opt_sync = *optarg;
-                if( opt_sync != PMUTEX && opt_sync != SPLOCK && opt_sync != '\0')
+                if( opt_sync != 'm' && opt_sync != 's' && opt_sync != '\0')
                 {
                     fprintf( stderr, "%s: usage: %s SYNC. Using default ('\0').\n", argv[0], optarg );
                     opt_sync = '\0';
@@ -261,9 +322,16 @@ int main(int argc, char **argv)
     {                        
       	thread_info_array[t].ID = t;
       	thread_info_array[t].n_iterations = num_iterations;
-      	thread_info_array[t].my_sync = opt_sync;
+      	//thread_info_array[t].my_sync = opt_sync;
 
-      	int rs = pthread_create(&threadID[t], 0, ThreadFunction, (void*)&thread_info_array[t]);
+      	/* Check for synchronization */
+      	int rs;
+      	if(opt_sync == 'm')
+      		rs = pthread_create(&threadID[t], 0, ThreadFunction_m, (void*)&thread_info_array[t]);
+      	else if(opt_sync == 's')
+      		rs = pthread_create(&threadID[t], 0, ThreadFunction_s, (void*)&thread_info_array[t]);
+      	else // opt_sync == '\0'
+      		rs = pthread_create(&threadID[t], 0, ThreadFunction, (void*)&thread_info_array[t]);
       	if(rs)
       	{
         	fprintf(stderr, "Error creating thread. Aborting\n");
@@ -289,8 +357,8 @@ int main(int argc, char **argv)
     timediff = BILLION * (end.tv_sec - start.tv_sec) + end.tv_nsec - start.tv_nsec;
 
     /* Log to STDERR if length of list isn't 0 */
-    length = SortedList_length(list);
-    if(length != 0)
+    //length = SortedList_length(list);
+    if(SortedList_length(list))
         fprintf(stderr, "ERROR: final length = %d\n", length);
 
     /* Log to STDOUT runtime (ns), average time/op (ns) */
