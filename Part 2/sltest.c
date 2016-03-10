@@ -56,17 +56,22 @@ void* ThreadFunction(void *tInfo)
     mydata = (struct threadInfo*) tInfo;
     //char opt_sync = mydata->my_sync;
     int element_start = mydata->ID * mydata->num_iterations;
+
+    /* Insert each of its elements into list */
     int i;
     for(i = 0; i < mydata->n_iterations; ++i) 
     {
-		SortedList_insert(list, SortedListElement_t *element); // interation time
+		SortedList_insert(list, elements[element_start+i]);
 	}
 
-	//TODO: get list length
+	/* Grabs list length */
+	int length = SortedList_length(list);
+
+	/* Look up each added key and delete the returned element from list */
     for(i = 0; i < mydata->n_iterations; ++i)
     {
-		lookup ();
-		delete ();
+    	SortedListElement_t toDelete = SortedList_lookup(list, keys[element_start+i]);
+		SortedList_delete(toDelete);
 	}
 }
 
