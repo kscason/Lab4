@@ -380,5 +380,11 @@ int main(int argc, char **argv)
     fprintf(stdout, "elapsed time: %lu ns\nper operation: %lu ns\n", 
         timediff, timediff/(uint64_t)(num_threads*num_iterations*2*num_iterations/num_lists));
 
+
+    for(i=0; i < tot_elements; ++i)
+        free(keys[i]);
+    free(keys);
+    free(elements);
+    free(list);
     return return_value;
 }
