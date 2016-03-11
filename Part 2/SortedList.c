@@ -8,7 +8,7 @@ void SortedList_insert(SortedList_t *list, SortedListElement_t *element)
     SortedListElement_t *curNode = list;
 
     // First node
-    if (SortedList_length(list) == 0)
+    if (list->next == NULL)
     {
         list->next = element;
         list->prev = NULL;
@@ -97,7 +97,7 @@ int SortedList_delete(SortedListElement_t *element)
 SortedListElement_t *SortedList_lookup(SortedList_t *list, const char *key)
 {
     // Can't find the element in a corrupted or empty list
-    if (key == NULL || list == NULL || SortedList_length(list) == 0)
+    if (key == NULL || list == NULL || list->next == NULL)
         return NULL;
 
     SortedListElement_t *curNode = list->next;

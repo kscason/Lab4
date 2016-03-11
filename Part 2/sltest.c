@@ -78,10 +78,8 @@ void* ThreadFunction(void *tInfo)
     {
 		SortedList_insert(&list[hash(elements[element_start+i].key)], &elements[element_start+i]);
 	}
-
 	/* Grabs list length */
 	int length = SortedList_length(list);
-
 	/* Look up each added key and delete the returned element from list */
     for(i = 0; i < mydata->n_iterations; ++i)
     {
