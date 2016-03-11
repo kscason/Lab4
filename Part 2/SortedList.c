@@ -128,8 +128,7 @@ int SortedList_length(SortedList_t *list)
 
     for(i = 0; i < num_lists; ++i)
     {
-        //curNode = &list[i];
-        SortedList_t* = &list[i];
+        curNode = &list[i];
         if (curNode == NULL)
             break;
 
